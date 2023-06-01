@@ -1,7 +1,7 @@
 *.DS_Store
 *.pyc
 *.egg*
-#venv*
+venv*
 dso/dso/summary*
 *log_*
 .ipynb_checkpoints
