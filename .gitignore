@@ -1,7 +1,7 @@
 *.DS_Store
 *.pyc
 *.egg*
-venv*
+#venv*
 dso/dso/summary*
 *log_*
 .ipynb_checkpoints
@@ -17,5 +17,5 @@ dso/dso/cyfunc*.so
 *videos
 *bsub
 dep-repos/
-.*
+#.*
 !/.gitignore
