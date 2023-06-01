@@ -55,7 +55,7 @@ class LanguageModelPrior(object):
 
     def load_model(self, saved_language_model_path):
         sess = tf.compat.v1.Session()
-        saver = tf.train.Saver()
+        saver = tf.compat.v1.train.Saver()
         saver.restore(sess,tf.train.latest_checkpoint(saved_language_model_path))
         return sess
 

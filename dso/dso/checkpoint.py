@@ -53,7 +53,7 @@ class Checkpoint():
             self.checkpoint_dir = None
 
         # Create the Saver
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
 
         # Load from existing checkpoint, if given
         if load_path is not None:

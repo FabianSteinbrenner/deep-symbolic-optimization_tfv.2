@@ -44,7 +44,7 @@ class Policy(ABC):
     """    
 
     def __init__(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             prior : JointPrior,
             state_manager : StateManager,
             debug : int = 0,  

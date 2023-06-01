@@ -43,7 +43,7 @@ def main(stringency):
 
     # Save the TF model
     tf_save_path = resource_filename("dso.test", "data/test_model" + suffix)
-    saver = tf.train.Saver()
+    saver = tf.compat.v1.train.Saver()
     saver.save(model.sess, tf_save_path)
 
 

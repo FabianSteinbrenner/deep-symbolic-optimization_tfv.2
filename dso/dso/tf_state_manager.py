@@ -119,20 +119,20 @@ class HierarchicalStateManager(StateManager):
         super().setup_manager(policy)
         # Create embeddings if needed
         if self.embedding:
-            initializer = tf.random_uniform_initializer(minval=-1.0,
+            initializer = tf.compat.v1.random_uniform_initializer(minval=-1.0,
                                                         maxval=1.0,
                                                         seed=0)
-            with tf.variable_scope("embeddings", initializer=initializer):
+            with tf.compat.v1.variable_scope("embeddings", initializer=initializer):
                 if self.observe_action:
-                    self.action_embeddings = tf.get_variable("action_embeddings",
+                    self.action_embeddings = tf.compat.v1.get_variable("action_embeddings",
                                                              [self.library.n_action_inputs, self.embedding_size],
                                                              trainable=True)
                 if self.observe_parent:
-                    self.parent_embeddings = tf.get_variable("parent_embeddings",
+                    self.parent_embeddings = tf.compat.v1.get_variable("parent_embeddings",
                                                              [self.library.n_parent_inputs, self.embedding_size],
                                                              trainable=True)
                 if self.observe_sibling:
-                    self.sibling_embeddings = tf.get_variable("sibling_embeddings",
+                    self.sibling_embeddings = tf.compat.v1.get_variable("sibling_embeddings",
                                                               [self.library.n_sibling_inputs, self.embedding_size],
                                                               trainable=True)
 
@@ -149,19 +149,19 @@ class HierarchicalStateManager(StateManager):
         # Action, parent, and sibling inputs are either one-hot or embeddings
         if self.observe_action:
             if self.embedding:
-                x = tf.nn.embedding_lookup(self.action_embeddings, action)
+                x = tf.nn.embedding_lookup(params=self.action_embeddings, ids=action)
             else:
                 x = tf.one_hot(action, depth=self.library.n_action_inputs)
             observations.append(x)
         if self.observe_parent:
             if self.embedding:
-                x = tf.nn.embedding_lookup(self.parent_embeddings, parent)
+                x = tf.nn.embedding_lookup(params=self.parent_embeddings, ids=parent)
             else:
                 x = tf.one_hot(parent, depth=self.library.n_parent_inputs)
             observations.append(x)
         if self.observe_sibling:
             if self.embedding:
-                x = tf.nn.embedding_lookup(self.sibling_embeddings, sibling)
+                x = tf.nn.embedding_lookup(params=self.sibling_embeddings, ids=sibling)
             else:
                 x = tf.one_hot(sibling, depth=self.library.n_sibling_inputs)
             observations.append(x)

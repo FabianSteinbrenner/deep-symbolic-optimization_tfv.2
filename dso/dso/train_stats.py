@@ -170,7 +170,7 @@ class StatsLogger():
             else:
                 timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
                 summary_dir = os.path.join("summary", timestamp)
-            self.summary_writer = tf.summary.FileWriter(summary_dir, self.sess.graph)
+            self.summary_writer = tf.compat.v1.summary.FileWriter(summary_dir, self.sess.graph)
         else:
             self.summary_writer = None
 
@@ -271,7 +271,7 @@ class StatsLogger():
         if self.save_positional_entropy:
             #with open(self.buffer_pos_entropy, 'ab') as f:
                 # saves only the last positional entropy
-            np.save(self.buffer_pos_entropy, positional_entropy)
+            np.save(self.buffer_pos_entropy, positional_entropy, save_format='h5')
 
         if self.save_top_samples_per_batch > 0:
             df_topsamples = pd.DataFrame(top_samples_per_batch,
@@ -305,7 +305,7 @@ class StatsLogger():
             #Kept all_r numpy file for backwards compatibility.
             with open(self.all_r_output_file, 'ab') as f:
                 all_r = np.array(all_r_padded, dtype=np.float32)
-                np.save(f, all_r)
+                np.save(f, all_r, save_format='h5')
 
         result = {}
 

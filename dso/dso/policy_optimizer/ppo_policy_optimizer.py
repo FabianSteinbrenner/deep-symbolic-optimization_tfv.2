@@ -22,7 +22,7 @@ class PPOPolicyOptimizer(PolicyOptimizer):
         
     """
     def __init__(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             policy : Policy,
             debug : int = 0, 
             summary : bool = False,
@@ -44,16 +44,16 @@ class PPOPolicyOptimizer(PolicyOptimizer):
 
 
     def _set_loss(self):
-        with tf.name_scope("losses"):
+        with tf.compat.v1.name_scope("losses"):
             # Retrieve rewards from batch
             r = self.sampled_batch_ph.rewards
 
-            self.old_neglogp_ph = tf.placeholder(dtype=tf.float32, 
+            self.old_neglogp_ph = tf.compat.v1.placeholder(dtype=tf.float32, 
                                     shape=(None,), name="old_neglogp")
             ratio = tf.exp(self.old_neglogp_ph - self.neglogp)
             clipped_ratio = tf.clip_by_value(ratio, 1. - self.ppo_clip_ratio,
                                         1. + self.ppo_clip_ratio)
-            ppo_loss = -tf.reduce_mean((r - self.baseline) *
+            ppo_loss = -tf.reduce_mean(input_tensor=(r - self.baseline) *
                                     tf.minimum(ratio, clipped_ratio))
             # Loss already is set to entropy loss
             self.loss += ppo_loss
@@ -61,13 +61,13 @@ class PPOPolicyOptimizer(PolicyOptimizer):
             # Define PPO diagnostics
             clipped = tf.logical_or(ratio < (1. - self.ppo_clip_ratio),
                                 ratio > 1. + self.ppo_clip_ratio)
-            self.clip_fraction = tf.reduce_mean(tf.cast(clipped, tf.float32))
-            self.sample_kl = tf.reduce_mean(self.neglogp - self.old_neglogp_ph)
+            self.clip_fraction = tf.reduce_mean(input_tensor=tf.cast(clipped, tf.float32))
+            self.sample_kl = tf.reduce_mean(input_tensor=self.neglogp - self.old_neglogp_ph)
 
 
     def _preppend_to_summary(self):
-        with tf.name_scope("summary"):
-            tf.summary.scalar("ppo_loss", self.ppo_loss)
+        with tf.compat.v1.name_scope("summary"):
+            tf.compat.v1.summary.scalar("ppo_loss", self.ppo_loss)
 
 
     def train_step(self, baseline, sampled_batch):

@@ -318,14 +318,14 @@ def make_batch_ph(name : str, n_choices : int):
     from dso.memory import Batch
     from dso.program import Program
 
-    with tf.name_scope(name):
+    with tf.compat.v1.name_scope(name):
         batch_ph = {
-            "actions": tf.placeholder(tf.int32, [None, None]),
-            "obs": tf.placeholder(tf.float32, [None, Program.task.OBS_DIM, None]),
-            "priors": tf.placeholder(tf.float32, [None, None, n_choices]),
-            "lengths": tf.placeholder(tf.int32, [None, ]),
-            "rewards": tf.placeholder(tf.float32, [None], name="r"),
-            "on_policy": tf.placeholder(tf.int32, [None, ])
+            "actions": tf.compat.v1.placeholder(tf.int32, [None, None]),
+            "obs": tf.compat.v1.placeholder(tf.float32, [None, Program.task.OBS_DIM, None]),
+            "priors": tf.compat.v1.placeholder(tf.float32, [None, None, n_choices]),
+            "lengths": tf.compat.v1.placeholder(tf.int32, [None, ]),
+            "rewards": tf.compat.v1.placeholder(tf.float32, [None], name="r"),
+            "on_policy": tf.compat.v1.placeholder(tf.int32, [None, ])
          }
         batch_ph = Batch(**batch_ph)
     return batch_ph

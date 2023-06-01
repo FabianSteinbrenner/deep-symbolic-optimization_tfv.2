@@ -23,7 +23,7 @@ class PQTPolicyOptimizer(PolicyOptimizer):
         
     """
     def __init__(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             policy : Policy,
             debug : int = 0, 
             summary : bool = False,
@@ -46,20 +46,20 @@ class PQTPolicyOptimizer(PolicyOptimizer):
 
 
     def _set_loss(self):
-        with tf.name_scope("losses"):
+        with tf.compat.v1.name_scope("losses"):
             # Create placeholder for PQT batch
             self.pqt_batch_ph = make_batch_ph("pqt_batch", self.n_choices) #self.n_choices is defined in parent class
 
             pqt_neglogp, _ = self.policy.make_neglogp_and_entropy(self.pqt_batch_ph, self.entropy_gamma)
-            self.pqt_loss = self.pqt_weight * tf.reduce_mean(pqt_neglogp, name="pqt_loss")
+            self.pqt_loss = self.pqt_weight * tf.reduce_mean(input_tensor=pqt_neglogp, name="pqt_loss")
         
             # Loss already is set to entropy loss
             self.loss += self.pqt_loss
 
 
     def _preppend_to_summary(self):
-        with tf.name_scope("summary"):
-            tf.summary.scalar("pqt_loss", self.pqt_loss)
+        with tf.compat.v1.name_scope("summary"):
+            tf.compat.v1.summary.scalar("pqt_loss", self.pqt_loss)
 
 
     def train_step(self, baseline, sampled_batch, pqt_batch):

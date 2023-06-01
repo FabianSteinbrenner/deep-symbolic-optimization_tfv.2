@@ -26,9 +26,9 @@ def cached_results(model, request):
         model_data = "data/test_model_weak"
     tf_load_path = resource_filename("dso.test", model_data)
     model.setup()
-    saver = tf.train.Saver()
+    saver = tf.compat.v1.train.Saver()
     saver.restore(model.sess, tf_load_path)
-    results = model.sess.run(tf.trainable_variables())
+    results = model.sess.run(tf.compat.v1.trainable_variables())
 
     return [request.param, results]
 
@@ -72,7 +72,7 @@ def test_model_parity(model, cached_results, config):
                                  })
 
     model.train()
-    results = model.sess.run(tf.trainable_variables())
+    results = model.sess.run(tf.compat.v1.trainable_variables())
     results = np.concatenate([a.flatten() for a in results])
     cached_results = np.concatenate([a.flatten() for a in cached_results])
     assert np.linalg.norm(cached_results, ord=1) > 0

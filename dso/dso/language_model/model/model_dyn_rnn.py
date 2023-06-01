@@ -1,7 +1,8 @@
 """Model architecture of default (saved) LanguageModel"""
 
 import tensorflow as tf
-from tensorflow.contrib import rnn
+import tensorflow_addons as tfa
+import tensorflow.compat.v1.nn.rnn_cell as rnn
 
 class LanguageModel(object):
     def __init__(self, vocabulary_size, embedding_size, num_layers, num_hidden, mode='train'):
@@ -18,16 +19,16 @@ class LanguageModel(object):
             self.seq_len = self.x[:, -1]
         elif mode == 'predict':
             self.lm_input = self.x[:,:]
-            self.seq_len = tf.reduce_sum(tf.sign(self.lm_input), 1)
+            self.seq_len = tf.reduce_sum(input_tensor=tf.sign(self.lm_input), axis=1)
 
         self.logits=tf.Variable(2.0, name="logits")
 
         # embedding, one-hot encoding
         # if embedding:
-        with tf.name_scope("embedding"):
+        with tf.compat.v1.name_scope("embedding"):
             init_embeddings = tf.random.uniform([vocabulary_size, self.embedding_size])
             embeddings = tf.compat.v1.get_variable("embeddings", initializer=init_embeddings)
-            lm_input_emb = tf.nn.embedding_lookup(embeddings, self.lm_input)
+            lm_input_emb = tf.compat.v1.nn.embedding_lookup(params=embeddings, ids=self.lm_input)
 
         with tf.compat.v1.variable_scope("rnn"):
             def make_cell():
@@ -40,7 +41,7 @@ class LanguageModel(object):
             self.initial_state = cell.zero_state(self.batch_size, dtype=tf.float32)
 
             # rnn_outputs: [batch_size, max_len, num_hidden(cell output)]
-            rnn_outputs, self.last_state = tf.nn.dynamic_rnn(
+            rnn_outputs, self.last_state = tf.compat.v1.nn.dynamic_rnn(
                 cell=cell, 
                 initial_state=self.initial_state,
                 inputs=lm_input_emb,
@@ -48,19 +49,19 @@ class LanguageModel(object):
                 dtype=tf.float32)
 
         # with tf.name_scope("output"):
-        self.logits = tf.layers.dense(rnn_outputs, vocabulary_size)
+        self.logits = tf.compat.v1.layers.dense(rnn_outputs, vocabulary_size)
 
 
-        with tf.name_scope("loss"):
+        with tf.compat.v1.name_scope("loss"):
             if mode == "train":
                 target = self.x[:, 1:-1]
             elif mode == "predict":
                 target = self.x[:, :]
 
-            self.loss = tf.contrib.seq2seq.sequence_loss(
+            self.loss = tfa.contrib.seq2seq.sequence_loss(
                 logits=self.logits,
                 targets=target,
-                weights=tf.sequence_mask(self.seq_len, tf.shape(self.x)[1] - 2, dtype=tf.float32),
+                weights=tf.sequence_mask(self.seq_len, tf.shape(input=self.x)[1] - 2, dtype=tf.float32),
                 average_across_timesteps=True,
                 average_across_batch=True
             )

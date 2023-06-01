@@ -9,7 +9,7 @@ from dso.memory import Batch
 from dso.policy import Policy
 from dso.utils import make_batch_ph
 
-class LinearWrapper(tf.contrib.rnn.LayerRNNCell):
+class LinearWrapper(tf.compat.v1.nn.rnn_cell.RNNCell):
     """RNNCell wrapper that adds a linear layer to the output.
 
     See: https://github.com/tensorflow/models/blob/master/research/brain_coder/single_task/pg_agent.py
@@ -20,9 +20,9 @@ class LinearWrapper(tf.contrib.rnn.LayerRNNCell):
         self._output_size = output_size
 
     def __call__(self, inputs, state, scope=None):
-        with tf.variable_scope(type(self).__name__):
+        with tf.compat.v1.variable_scope(type(self).__name__):
             outputs, state = self.cell(inputs, state, scope=scope)
-            logits = tf.layers.dense(outputs, units=self._output_size)
+            logits = tf.compat.v1.layers.dense(outputs, units=self._output_size)
 
         return logits, state
 
@@ -43,9 +43,9 @@ def safe_cross_entropy(p, logq, axis=-1):
     """
     # Put 1 where p == 0. In the case, q =p, logq = -inf and this
     # might procude numerical errors below
-    safe_logq = tf.where(tf.equal(p, 0.), tf.ones_like(logq), logq)
+    safe_logq = tf.compat.v1.where(tf.equal(p, 0.), tf.ones_like(logq), logq)
     # Safely compute the product
-    return - tf.reduce_sum(p * safe_logq, axis)
+    return - tf.reduce_sum(input_tensor=p * safe_logq, axis=axis)
 
 class RNNPolicy(Policy):
     """Recurrent neural network (RNN) policy used to generate expressions.
@@ -100,7 +100,7 @@ class RNNPolicy(Policy):
         self.n_choices = Program.library.L
 
         # Placeholders, computed after instantiating expressions
-        self.batch_size = tf.placeholder(dtype=tf.int32, shape=(), name="batch_size")
+        self.batch_size = tf.compat.v1.placeholder(dtype=tf.int32, shape=(), name="batch_size")
 
         # setup model
         self._setup_tf_model(cell, num_layers, num_units, initializer)
@@ -123,28 +123,28 @@ class RNNPolicy(Policy):
         max_length = self.max_length
 
         # Build RNN policy
-        with tf.name_scope("controller"):
+        with tf.compat.v1.name_scope("controller"):
 
             def make_initializer(name):
                 if name == "zeros":
-                    return tf.zeros_initializer()
+                    return tf.compat.v1.zeros_initializer()
                 if name == "var_scale":
-                    return tf.contrib.layers.variance_scaling_initializer(
-                            factor=0.5, mode='FAN_AVG', uniform=True, seed=0)
+                    return tf.compat.v1.keras.initializers.VarianceScaling(
+                            scale=0.5, mode=('FAN_AVG').lower(), distribution=("uniform" if True else "truncated_normal"), seed=0)
                 raise ValueError("Did not recognize initializer '{}'".format(name))
 
             def make_cell(name, num_units, initializer):
                 if name == 'lstm':
-                    return tf.nn.rnn_cell.LSTMCell(num_units, initializer=initializer)
+                    return tf.compat.v1.nn.rnn_cell.LSTMCell(num_units, initializer=initializer)
                 if name == 'gru':
-                    return tf.nn.rnn_cell.GRUCell(num_units, kernel_initializer=initializer, bias_initializer=initializer)
+                    return tf.compat.v1.nn.rnn_cell.GRUCell(num_units, kernel_initializer=initializer, bias_initializer=initializer)
                 raise ValueError("Did not recognize cell type '{}'".format(name))
 
             # Create recurrent cell
             if isinstance(num_units, int):
                 num_units = [num_units] * num_layers
             initializer = make_initializer(initializer)
-            cell = tf.contrib.rnn.MultiRNNCell(
+            cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(
                     [make_cell(cell, n, initializer=initializer) for n in num_units])
             cell = LinearWrapper(cell=cell, output_size=n_choices)
 
@@ -196,10 +196,10 @@ class RNNPolicy(Policy):
                     action = tf.random.categorical(logits=logits, num_samples=1,
                                                    dtype=tf.int32, seed=1)[:, 0]
                     next_actions_ta = actions_ta.write(time - 1, action) # Write chosen actions
-                    actions = tf.transpose(next_actions_ta.stack())  # Shape: (?, time)
+                    actions = tf.transpose(a=next_actions_ta.stack())  # Shape: (?, time)
 
                     # Compute obs and prior
-                    next_obs, next_prior, next_finished = tf.py_func(func=task.get_next_obs,
+                    next_obs, next_prior, next_finished = tf.compat.v1.py_func(func=task.get_next_obs,
                                                                      inp=[actions, obs, finished],
                                                                      Tout=[tf.float32, tf.float32, tf.bool])
                     next_prior.set_shape([None, n_choices])
@@ -222,13 +222,13 @@ class RNNPolicy(Policy):
                 return (finished, next_input, next_cell_state, emit_output, next_loop_state)
 
             # Returns RNN emit outputs TensorArray (i.e. logits), final cell state, and final loop state
-            with tf.variable_scope('policy'):
-                _, _, loop_state = tf.nn.raw_rnn(cell=cell, loop_fn=loop_fn)
+            with tf.compat.v1.variable_scope('policy'):
+                _, _, loop_state = tf.compat.v1.nn.raw_rnn(cell=cell, loop_fn=loop_fn)
                 actions_ta, obs_ta, priors_ta, _, _, _ = loop_state
 
-            self.actions = tf.transpose(actions_ta.stack(), perm=[1, 0]) # (?, max_length)
-            self.obs = tf.transpose(obs_ta.stack(), perm=[1, 2, 0]) # (?, obs_dim, max_length)
-            self.priors = tf.transpose(priors_ta.stack(), perm=[1, 0, 2]) # (?, max_length, n_choices)
+            self.actions = tf.transpose(a=actions_ta.stack(), perm=[1, 0]) # (?, max_length)
+            self.obs = tf.transpose(a=obs_ta.stack(), perm=[1, 2, 0]) # (?, obs_dim, max_length)
+            self.priors = tf.transpose(a=priors_ta.stack(), perm=[1, 0, 2]) # (?, max_length, n_choices)
             
             # Memory batch
             self.memory_batch_ph = make_batch_ph("memory_batch", n_choices)
@@ -254,8 +254,8 @@ class RNNPolicy(Policy):
             entropy_gamma = 1.0
         entropy_gamma_decay = np.array([entropy_gamma**t for t in range(self.max_length)], dtype=np.float32)
 
-        with tf.variable_scope('policy', reuse=True):
-            logits, _ = tf.nn.dynamic_rnn(cell=self.cell,
+        with tf.compat.v1.variable_scope('policy', reuse=True):
+            logits, _ = tf.compat.v1.nn.dynamic_rnn(cell=self.cell,
                                           inputs=self.state_manager.get_tensor_input(B.obs),
                                           sequence_length=B.lengths, # Backpropagates only through sequence length
                                           dtype=tf.float32)
@@ -266,7 +266,7 @@ class RNNPolicy(Policy):
         logits += B.priors
         probs = tf.nn.softmax(logits)
         logprobs = tf.nn.log_softmax(logits)
-        B_max_length = tf.shape(B.actions)[1] # Maximum sequence length for this Batch
+        B_max_length = tf.shape(input=B.actions)[1] # Maximum sequence length for this Batch
         # Generate mask from sequence lengths
         # NOTE: Using this mask for neglogp and entropy actually does NOT
         # affect training because gradients are zero outside the lengths.
@@ -275,7 +275,7 @@ class RNNPolicy(Policy):
         # Negative log probabilities of sequences
         actions_one_hot = tf.one_hot(B.actions, depth=self.n_choices, axis=-1, dtype=tf.float32)
         neglogp_per_step = safe_cross_entropy(actions_one_hot, logprobs, axis=2) # Sum over action dim
-        neglogp = tf.reduce_sum(neglogp_per_step * mask, axis=1) # Sum over time dim
+        neglogp = tf.reduce_sum(input_tensor=neglogp_per_step * mask, axis=1) # Sum over time dim
         
         # NOTE 1: The above implementation is the same as the one below:
         # neglogp_per_step = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,labels=actions)
@@ -292,7 +292,7 @@ class RNNPolicy(Policy):
         sliced_entropy_gamma_decay = tf.slice(entropy_gamma_decay, [0], [B_max_length])
         entropy_gamma_decay_mask = sliced_entropy_gamma_decay * mask # ->(batch_size, max_length)
         entropy_per_step = safe_cross_entropy(probs, logprobs, axis=2) # Sum over action dim -> (batch_size, max_length)
-        entropy = tf.reduce_sum(entropy_per_step * entropy_gamma_decay_mask, axis=1) # Sum over time dim -> (batch_size, )
+        entropy = tf.reduce_sum(input_tensor=entropy_per_step * entropy_gamma_decay_mask, axis=1) # Sum over time dim -> (batch_size, )
         
         return neglogp, entropy
 
@@ -436,6 +436,6 @@ class RNNPolicy(Policy):
         probs_bounded = ((1-self.action_prob_lowerbound)*probs +
                          self.action_prob_lowerbound/
                          float(self.n_choices))
-        logits_bounded = tf.log(probs_bounded)
+        logits_bounded = tf.math.log(probs_bounded)
 
         return logits_bounded

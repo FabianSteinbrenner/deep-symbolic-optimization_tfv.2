@@ -49,7 +49,7 @@ class PolicyOptimizer(ABC):
     """    
 
     def _init(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             policy : Policy,
             debug : int = 0,    
             summary : bool = False,
@@ -102,8 +102,8 @@ class PolicyOptimizer(ABC):
         self.n_choices = Program.library.L
 
         # Placeholders, computed after instantiating expressions
-        self.batch_size = tf.placeholder(dtype=tf.int32, shape=(), name="batch_size")
-        self.baseline = tf.placeholder(dtype=tf.float32, shape=(), name="baseline")
+        self.batch_size = tf.compat.v1.placeholder(dtype=tf.int32, shape=(), name="batch_size")
+        self.baseline = tf.compat.v1.placeholder(dtype=tf.float32, shape=(), name="baseline")
    
         # On policy batch
         self.sampled_batch_ph = make_batch_ph("sampled_batch", self.n_choices)
@@ -116,12 +116,12 @@ class PolicyOptimizer(ABC):
     def _init_loss_with_entropy(self) -> None:
         # Add entropy contribution to loss. The entropy regularizer does not
         # depend on the particular policy optimizer
-        with tf.name_scope("losses"):
+        with tf.compat.v1.name_scope("losses"):
 
             self.neglogp, entropy = self.policy.make_neglogp_and_entropy(self.sampled_batch_ph, self.entropy_gamma)
 
             # Entropy loss
-            self.entropy_loss = -self.entropy_weight * tf.reduce_mean(entropy, name="entropy_loss")
+            self.entropy_loss = -self.entropy_weight * tf.reduce_mean(input_tensor=entropy, name="entropy_loss")
             loss = self.entropy_loss
 
             # self.loss is modified in the child object
@@ -144,28 +144,28 @@ class PolicyOptimizer(ABC):
         """    
         def make_optimizer(name, learning_rate):
             if name == "adam":
-                return tf.train.AdamOptimizer(learning_rate=learning_rate)
+                return tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
             if name == "rmsprop":
-                return tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=0.99)
+                return tf.compat.v1.train.RMSPropOptimizer(learning_rate=learning_rate, decay=0.99)
             if name == "sgd":
-                return tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+                return tf.compat.v1.train.GradientDescentOptimizer(learning_rate=learning_rate)
             raise ValueError("Did not recognize optimizer '{}'".format(name))
 
         # Create training op
         optimizer = make_optimizer(name=self.optimizer, learning_rate=self.learning_rate)
-        with tf.name_scope("train"):
+        with tf.compat.v1.name_scope("train"):
             self.grads_and_vars = optimizer.compute_gradients(self.loss)
             self.train_op = optimizer.apply_gradients(self.grads_and_vars)
             # The two lines above are equivalent to:
             # self.train_op = optimizer.minimize(self.loss)
-        with tf.name_scope("grad_norm"):
+        with tf.compat.v1.name_scope("grad_norm"):
             self.grads, _ = list(zip(*self.grads_and_vars))
-            self.norms = tf.global_norm(self.grads)  
+            self.norms = tf.linalg.global_norm(self.grads)  
         
         if self.debug >= 1:
             total_parameters = 0
             print("")
-            for variable in tf.trainable_variables():
+            for variable in tf.compat.v1.trainable_variables():
                 shape = variable.get_shape()
                 n_parameters = np.product(shape)
                 total_parameters += n_parameters
@@ -186,24 +186,24 @@ class PolicyOptimizer(ABC):
     def _setup_summary(self) -> None:
         """ Setup tensor flow summary
         """    
-        with tf.name_scope("summary"):
-            tf.summary.scalar("entropy_loss", self.entropy_loss)
-            tf.summary.scalar("total_loss", self.loss)
-            tf.summary.scalar("reward", tf.reduce_mean(self.sampled_batch_ph.rewards))
-            tf.summary.scalar("baseline", self.baseline)
-            tf.summary.histogram("reward", self.sampled_batch_ph.rewards)
-            tf.summary.histogram("length", self.sampled_batch_ph.lengths)
+        with tf.compat.v1.name_scope("summary"):
+            tf.compat.v1.summary.scalar("entropy_loss", self.entropy_loss)
+            tf.compat.v1.summary.scalar("total_loss", self.loss)
+            tf.compat.v1.summary.scalar("reward", tf.reduce_mean(input_tensor=self.sampled_batch_ph.rewards))
+            tf.compat.v1.summary.scalar("baseline", self.baseline)
+            tf.compat.v1.summary.histogram("reward", self.sampled_batch_ph.rewards)
+            tf.compat.v1.summary.histogram("length", self.sampled_batch_ph.lengths)
             for g, v in self.grads_and_vars:
-                tf.summary.histogram(v.name, v)
-                tf.summary.scalar(v.name + '_norm', tf.norm(v))
-                tf.summary.histogram(v.name + '_grad', g)
-                tf.summary.scalar(v.name + '_grad_norm', tf.norm(g))
-            tf.summary.scalar('gradient norm', self.norms)
-            self.summaries = tf.summary.merge_all()
+                tf.compat.v1.summary.histogram(v.name, v)
+                tf.compat.v1.summary.scalar(v.name + '_norm', tf.norm(tensor=v))
+                tf.compat.v1.summary.histogram(v.name + '_grad', g)
+                tf.compat.v1.summary.scalar(v.name + '_grad_norm', tf.norm(tensor=g))
+            tf.compat.v1.summary.scalar('gradient norm', self.norms)
+            self.summaries = tf.compat.v1.summary.merge_all()
 
 
     def _setup_policy_optimizer(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             policy : Policy,
             debug : int = 0,    
             summary : bool = False,

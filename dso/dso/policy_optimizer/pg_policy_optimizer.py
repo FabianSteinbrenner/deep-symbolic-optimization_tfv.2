@@ -23,7 +23,7 @@ class PGPolicyOptimizer(PolicyOptimizer):
         
     """
     def __init__(self, 
-            sess : tf.Session,
+            sess : tf.compat.v1.Session,
             policy : Policy,
             debug : int = 0, 
             summary : bool = False,
@@ -37,18 +37,18 @@ class PGPolicyOptimizer(PolicyOptimizer):
 
 
     def _set_loss(self):
-        with tf.name_scope("losses"):
+        with tf.compat.v1.name_scope("losses"):
             # Retrieve rewards from batch
             r = self.sampled_batch_ph.rewards
             # Baseline is the worst of the current samples r
-            self.pg_loss = tf.reduce_mean((r - self.baseline) * self.neglogp, name="pg_loss")
+            self.pg_loss = tf.reduce_mean(input_tensor=(r - self.baseline) * self.neglogp, name="pg_loss")
             # Loss already is set to entropy loss
             self.loss += self.pg_loss
 
 
     def _preppend_to_summary(self):
-        with tf.name_scope("summary"):
-            tf.summary.scalar("pg_loss", self.pg_loss)
+        with tf.compat.v1.name_scope("summary"):
+            tf.compat.v1.summary.scalar("pg_loss", self.pg_loss)
 
 
     def train_step(self, baseline, sampled_batch):

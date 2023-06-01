@@ -18,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 # Set TensorFlow seed
-tf.set_random_seed(0)
+tf.compat.v1.set_random_seed(0)
 
 
 # Work for multiprocessing pool: compute reward
@@ -129,7 +129,7 @@ class Trainer():
         """
         self.sess = sess
         # Initialize compute graph
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
         self.policy = policy
         self.policy_optimizer = policy_optimizer
@@ -149,7 +149,7 @@ class Trainer():
         self.memory_threshold = memory_threshold
 
         if self.debug:
-            tvars = tf.trainable_variables()
+            tvars = tf.compat.v1.trainable_variables()
             def print_var_means():
                 tvars_vals = self.sess.run(tvars)
                 for var, val in zip(tvars, tvars_vals):
